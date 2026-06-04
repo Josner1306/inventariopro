@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>InventaPro Familiar</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.6.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263347;--surface3:#334155;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --accent:#f59e0b;--accent2:#3b82f6;--success:#10b981;--danger:#ef4444;--warn:#f97316;
+  --border:rgba(255,255,255,.08);--radius:10px;--radius-lg:14px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.topbar .brand{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:-.5px;display:flex;align-items:center;gap:7px}
+.topbar .brand i{font-size:22px}
+.topbar .tag{font-size:11px;background:rgba(245,158,11,.15);color:var(--accent);padding:2px 8px;border-radius:20px;font-weight:600}
+.stat-pills{display:flex;gap:8px;margin-left:auto}
+.stat-pill{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);padding:5px 11px;border-radius:20px;font-size:12px;color:var(--text2)}
+.stat-pill b{color:var(--text);font-weight:600}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:210px;background:var(--surface);border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex-shrink:0}
+.sidebar-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 8px 4px}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;width:100%;text-align:left;transition:all .12s}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:rgba(245,158,11,.12);color:var(--accent)}
+.nav-btn i{font-size:16px;width:20px;text-align:center}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:20px;overflow-y:auto;max-height:calc(100vh - 56px)}
+.view{display:none}
+.view.active{display:block}
+.page-title{font-size:18px;font-weight:600;margin-bottom:18px}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:160px;position:relative}
+.search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;pointer-events:none}
+.search-wrap input{width:100%;padding:8px 12px 8px 33px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
+.search-wrap input:focus{border-color:var(--accent2)}
+select{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;cursor:pointer}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{background:#d97706}
+.btn.success{background:rgba(16,185,129,.15);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+.btn.danger{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.btn.sm{padding:5px 10px;font-size:12px}
+
+/* ── CATEGORY PILLS ── */
+.cat-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.cat-pill{padding:4px 13px;border-radius:20px;font-size:12px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);transition:all .12s}
+.cat-pill:hover{border-color:var(--text2);color:var(--text)}
+.cat-pill.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+
+/* ── PRODUCT GRID ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;position:relative;transition:border-color .15s,transform .1s}
+.pcard:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
+.pcard-img{width:100%;height:110px;object-fit:cover}
+.pcard-placeholder{width:100%;height:110px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text3)}
+.pcard-overlay{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.pcard:hover .pcard-overlay{opacity:1}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;backdrop-filter:blur(4px);transition:background .1s}
+.icon-btn:hover{background:rgba(0,0,0,.85)}
+.icon-btn.del:hover{background:rgba(200,30,30,.8)}
+.pcard-body{padding:10px}
+.pcard-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard-model{font-size:11px;color:var(--text3)}
+.badge-row{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px}
+.badge.cat{background:rgba(59,130,246,.15);color:#93c5fd}
+.badge.ok{background:rgba(16,185,129,.15);color:#6ee7b7}
+.badge.low{background:rgba(249,115,22,.15);color:#fdba74}
+.qty-row{display:flex;align-items:center;gap:7px;margin-top:9px}
+.qty-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .1s;line-height:1}
+.qty-btn:hover{background:var(--surface3)}
+.qty-num{min-width:32px;text-align:center;font-size:14px;font-weight:700;color:var(--text)}
+.serial-tag{font-size:10px;color:var(--text3);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+
+/* ── IMPORT ── */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:44px 20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--text2)}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent2);color:var(--accent2);background:rgba(59,130,246,.05)}
+.drop-zone i{font-size:44px;display:block;margin-bottom:12px}
+.drop-zone p{font-size:15px;font-weight:500;margin-bottom:4px}
+.drop-zone small{font-size:12px}
+
+/* ── ALERTS ── */
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.alert.info{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.alert.success{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+.alert.warn{background:rgba(249,115,22,.12);color:#fdba74;border:1px solid rgba(249,115,22,.3)}
+
+/* ── STATS ── */
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-card .label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.stat-card .value{font-size:26px;font-weight:700}
+.cat-bar-row{margin-bottom:14px}
+.cat-bar-header{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.cat-bar-track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:3px;background:var(--accent2);transition:width .4s}
+
+/* ── ACTIVITY LOG ── */
+.log-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.log-icon{width:30px;height:30px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.log-text{font-size:13px;color:var(--text)}
+.log-sub{font-size:11px;color:var(--text3);margin-top:1px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;width:min(500px,100%);max-height:90vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:18px}
+.img-upload{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--text2);font-size:12px}
+.img-upload:hover{border-color:var(--accent);color:var(--accent)}
+.img-upload i{font-size:30px;display:block;margin-bottom:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}
+.form-row.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.fg input,.fg select,.fg textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;outline:none;font-family:inherit;transition:border-color .12s}
+.fg input:focus,.fg select,.fg textarea:focus{border-color:var(--accent2)}
+.fg textarea{height:72px;resize:vertical}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:50px 20px;color:var(--text2)}
+.empty i{font-size:40px;display:block;margin-bottom:10px;color:var(--text3)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:10px 18px;border-radius:10px;font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .sidebar{display:none}
+  .stat-pills{gap:4px}
+  .stat-pill .label{display:none}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="brand"><i class="ti ti-device-tv"></i>InventaPro <span class="tag">Familiar</span></div>
+  <div class="stat-pills">
+    <div class="stat-pill"><i class="ti ti-package"></i><b id="s-total">0</b> productos</div>
+    <div class="stat-pill"><i class="ti ti-stack-2"></i><b id="s-stock">0</b> unidades</div>
+    <div class="stat-pill" id="s-low-pill" style="color:#fdba74"><i class="ti ti-alert-triangle"></i><b id="s-low">0</b> bajo stock</div>
+  </div>
+</header>
+
+<div class="layout">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-label">Inventario</div>
+  <button class="nav-btn active" data-view="grid" onclick="nav(this)"><i class="ti ti-layout-grid"></i>Productos</button>
+  <button class="nav-btn" data-view="table" onclick="nav(this)"><i class="ti ti-list-details"></i>Lista detallada</button>
+  <div class="sidebar-label">Herramientas</div>
+  <button class="nav-btn" data-view="import" onclick="nav(this)"><i class="ti ti-file-import"></i>Importar Excel</button>
+  <button class="nav-btn" data-view="stats" onclick="nav(this)"><i class="ti ti-chart-bar"></i>Estadísticas</button>
+  <button class="nav-btn" data-view="activity" onclick="nav(this)"><i class="ti ti-history"></i>Actividad</button>
+  <div class="sidebar-label">Filtrar categoría</div>
+  <button class="nav-btn" onclick="setFilter('Pantallas')"><i class="ti ti-device-tv"></i>Pantallas</button>
+  <button class="nav-btn" onclick="setFilter('Sonido')"><i class="ti ti-volume"></i>Sonido</button>
+  <button class="nav-btn" onclick="setFilter('Iluminación')"><i class="ti ti-bulb"></i>Iluminación</button>
+  <button class="nav-btn" onclick="setFilter('Cables')"><i class="ti ti-plug"></i>Cables</button>
+  <button class="nav-btn" onclick="setFilter('Accesorios')"><i class="ti ti-tool"></i>Accesorios</button>
+  <button class="nav-btn" onclick="setFilter('')"><i class="ti ti-grid-dots"></i>Todos</button>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="content">
+
+  <!-- GRID VIEW -->
+  <div class="view active" id="view-grid">
+    <div class="toolbar">
+      <div class="search-wrap"><i class="ti ti-search"></i><input id="q1" type="text" placeholder="Buscar producto, modelo, serie…" oninput="renderGrid()"></div>
+      <select id="sort1" onchange="renderGrid()">
+        <option value="name">A–Z</option>
+        <option value="qty-desc">Mayor stock</option>
+        <option value="qty-asc">Menor stock</option>
+        <option value="cat">Categoría</option>
+      </select>
+      <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i>Agregar</button>
+    </div>
+    <div class="cat-filter" id="cat-pills"></div>
+    <div class="grid" id="card-grid"></div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div class="view" id="view-table">
+    <div class="toolbar">
+      <div class="search-wrap"><i class="ti ti-search"></i><input id="q2" type="text" placeholder="Buscar…" oninput="renderTable()"></div>
+      <button class="btn primary" onclick="openModal()"><i class="ti ti-plus"></i>Agregar</button>
+      <button class="btn success" onclick="exportCSV()"><i class="ti ti-download"></i>Exportar CSV</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Modelo</th><th>N° Serie</th><th>N° Parte</th><th>Cantidad</th><th>Acciones</th></tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- IMPORT VIEW -->
+  <div class="view" id="view-import">
+    <p class="page-title">Importar desde Excel / CSV</p>
+    <div class="alert info"><i class="ti ti-info-circle"></i>Columnas esperadas: <b>Nombre, Categoría, Modelo, N° Serie, N° Parte, Cantidad</b>. Si el producto ya existe, se suma la cantidad.</div>
+    <div class="drop-zone" id="drop-zone"
+      onclick="document.getElementById('file-in').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <i class="ti ti-file-spreadsheet"></i>
+      <p>Arrastra tu archivo aquí</p>
+      <small>o haz clic para seleccionar — .xlsx o .csv</small>
+    </div>
+    <input type="file" id="file-in" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
+    <div id="import-result" style="margin-top:16px"></div>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div class="view" id="view-stats">
+    <p class="page-title">Estadísticas del inventario</p>
+    <div class="stat-cards" id="stat-cards"></div>
+    <p style="font-size:14px;font-weight:600;margin-bottom:14px">Stock por categoría</p>
+    <div id="cat-bars"></div>
+  </div>
+
+  <!-- ACTIVITY VIEW -->
+  <div class="view" id="view-activity">
+    <p class="page-title">Registro de actividad</p>
+    <div id="activity-list"></div>
+  </div>
+
+</main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modal-title">Agregar producto</h2>
+    <div class="img-upload" onclick="document.getElementById('img-in').click()" id="img-drop">
+      <i class="ti ti-photo-up"></i>
+      Toca para cargar imagen del producto
+    </div>
+    <input type="file" id="img-in" accept="image/*" style="display:none" onchange="previewImg(event)">
+    <img id="img-prev" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px;margin-top:10px;display:none">
+    <input type="hidden" id="f-img-url">
+    <div class="form-row" style="margin-top:14px">
+      <div class="fg"><label>Nombre *</label><input id="f-name" type="text" placeholder='ej. TV Samsung 55"'></div>
+      <div class="fg"><label>Categoría</label>
+        <select id="f-cat">
+          <option>Pantallas</option><option>Sonido</option><option>Iluminación</option>
+          <option>Cables</option><option>Accesorios</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Modelo</label><input id="f-model" type="text" placeholder="ej. UN55TU7000"></div>
+      <div class="fg"><label>Cantidad</label><input id="f-qty" type="number" min="0" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>N° de Serie</label><input id="f-serial" type="text" placeholder="SN-XXXXXX"></div>
+      <div class="fg"><label>N° de Parte</label><input id="f-part" type="text" placeholder="PT-XXXXXX"></div>
+    </div>
+    <div class="form-row full">
+      <div class="fg"><label>Notas</label><textarea id="f-notes" placeholder="Condición, ubicación, observaciones…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn primary" onclick="saveProduct()"><i class="ti ti-check"></i>Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+let products = [];
+let activeFilter = '';
+let editId = null;
+
+const ICONS = {
+  Pantallas:'ti-device-tv', Sonido:'ti-volume', Iluminación:'ti-bulb',
+  Cables:'ti-plug', Accesorios:'ti-tool', Otro:'ti-box'
+};
+
+// ── INIT ────────────────────────────────────────────────────
+async function init() {
+  await fetchProducts();
+  renderGrid();
+  renderTable();
+  updateTopBar();
+}
+
+async function fetchProducts() {
+  try {
+    const r = await fetch(API + '/api/products');
+    products = await r.json();
+  } catch(e) { showToast('Error al conectar con el servidor', true); }
+}
+
+function updateTopBar() {
+  document.getElementById('s-total').textContent = products.length;
+  document.getElementById('s-stock').textContent = products.reduce((a,p)=>a+p.qty,0);
+  const low = products.filter(p=>p.qty<=2).length;
+  document.getElementById('s-low').textContent = low;
+  document.getElementById('s-low-pill').style.opacity = low>0?1:.4;
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────
+function nav(btn) {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  if(btn.dataset.view==='table') renderTable();
+  if(btn.dataset.view==='stats') renderStats();
+  if(btn.dataset.view==='activity') renderActivity();
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.toggle('active', p.dataset.cat===cat));
+  renderGrid();
+}
+
+// ── FILTER / SORT ────────────────────────────────────────────
+function filtered(qid) {
+  const q = (document.getElementById(qid)||{value:''}).value.toLowerCase();
+  return products.filter(p => {
+    const match = !q || (p.name+p.model+p.serial+p.part+p.cat).toLowerCase().includes(q);
+    return match && (!activeFilter || p.cat===activeFilter);
+  });
+}
+
+function sorted(list, sortId) {
+  const s = (document.getElementById(sortId)||{value:'name'}).value;
+  return [...list].sort((a,b)=>
+    s==='qty-desc'?b.qty-a.qty : s==='qty-asc'?a.qty-b.qty :
+    s==='cat'?a.cat.localeCompare(b.cat) : a.name.localeCompare(b.name)
+  );
+}
+
+// ── GRID ─────────────────────────────────────────────────────
+function renderCatPills() {
+  const cats = [...new Set(products.map(p=>p.cat))];
+  document.getElementById('cat-pills').innerHTML =
+    ['', ...cats].map(c=>`<button class="cat-pill${activeFilter===c?' active':''}" data-cat="${c}" onclick="setFilter('${c}')">${c===''?'Todos':c}</button>`).join('');
+}
+
+function renderGrid() {
+  renderCatPills();
+  const list = sorted(filtered('q1'),'sort1');
+  const g = document.getElementById('card-grid');
+  if(!list.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><i class="ti ti-search-off"></i><p>Sin resultados</p></div>';return;}
+  g.innerHTML = list.map(p => {
+    const icon = ICONS[p.cat]||'ti-box';
+    const imgHtml = p.img_url
+      ? `<img class="pcard-img" src="${p.img_url}" alt="${p.name}">`
+      : `<div class="pcard-placeholder"><i class="ti ${icon}"></i></div>`;
+    return `<div class="pcard">
+      ${imgHtml}
+      <div class="pcard-overlay">
+        <button class="icon-btn" onclick="openModal('${p.id}')" title="Editar"><i class="ti ti-pencil"></i></button>
+        <button class="icon-btn del" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+      </div>
+      <div class="pcard-body">
+        <div class="pcard-name" title="${p.name}">${p.name}</div>
+        <div class="pcard-model">${p.model||'—'}</div>
+        <div class="badge-row">
+          <span class="badge cat">${p.cat}</span>
+          <span class="badge ${p.qty<=2?'low':'ok'}">${p.qty<=2?'Stock bajo':'En stock'}</span>
+        </div>
+        <div class="qty-row">
+          <button class="qty-btn" onclick="changeQty('${p.id}',-1)">−</button>
+          <span class="qty-num">${p.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${p.id}',1)">+</button>
+          <span style="font-size:11px;color:var(--text3)">uds.</span>
+        </div>
+        ${p.serial?`<div class="serial-tag"><i class="ti ti-barcode" style="font-size:11px"></i> ${p.serial}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── TABLE ────────────────────────────────────────────────────
+function renderTable() {
+  const list = filtered('q2');
+  const tbody = document.getElementById('tbl-body');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Sin productos</td></tr>';return;}
+  tbody.innerHTML = list.map(p=>`<tr>
+    <td><b style="font-weight:600">${p.name}</b></td>
+    <td><span class="badge cat">${p.cat}</span></td>
+    <td style="color:var(--text2)">${p.model||'—'}</td>
+    <td style="font-size:11px;color:var(--text3)">${p.serial||'—'}</td>
+    <td style="font-size:11px;color:var(--text3)">${p.part||'—'}</td>
+    <td><span class="badge ${p.qty<=2?'low':'ok'}">${p.qty}</span></td>
+    <td style="display:flex;gap:5px">
+      <button class="btn sm" onclick="openModal('${p.id}')"><i class="ti ti-pencil"></i></button>
+      <button class="btn sm danger" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+    </td>
+  </tr>`).join('');
+}
+
+// ── STATS ────────────────────────────────────────────────────
+function renderStats() {
+  const total = products.reduce((a,p)=>a+p.qty,0);
+  const cats = {};
+  products.forEach(p=>{ cats[p.cat]=(cats[p.cat]||0)+p.qty; });
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="label">Productos únicos</div><div class="value">${products.length}</div></div>
+    <div class="stat-card"><div class="label">Unidades totales</div><div class="value">${total}</div></div>
+    <div class="stat-card"><div class="label">Stock bajo (≤2)</div><div class="value" style="color:var(--warn)">${products.filter(p=>p.qty<=2).length}</div></div>
+    <div class="stat-card"><div class="label">Categorías</div><div class="value">${Object.keys(cats).length}</div></div>
+  `;
+  const maxQ = Math.max(...Object.values(cats), 1);
+  document.getElementById('cat-bars').innerHTML = Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,qty])=>`
+    <div class="cat-bar-row">
+      <div class="cat-bar-header">
+        <span><i class="ti ${ICONS[cat]||'ti-box'}" style="font-size:14px;margin-right:6px"></i>${cat}</span>
+        <b>${qty} uds.</b>
+      </div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${Math.round(qty/maxQ*100)}%"></div></div>
+    </div>`).join('');
+}
+
+// ── ACTIVITY ─────────────────────────────────────────────────
+async function renderActivity() {
+  try {
+    const r = await fetch(API+'/api/activity');
+    const log = await r.json();
+    const icons = {crear:'ti-plus',editar:'ti-pencil',qty:'ti-arrows-up-down',eliminar:'ti-trash',importar:'ti-file-import'};
+    document.getElementById('activity-list').innerHTML = log.length
+      ? log.map(l=>`<div class="log-row">
+          <div class="log-icon"><i class="ti ${icons[l.action]||'ti-bolt'}" style="font-size:14px"></i></div>
+          <div><div class="log-text"><b>${l.action}</b> — ${l.product}</div>
+          <div class="log-sub">${l.detail} · ${l.ts}</div></div>
+        </div>`).join('')
+      : '<div class="empty"><i class="ti ti-clipboard-x"></i><p>Sin actividad registrada</p></div>';
+  } catch(e){ document.getElementById('activity-list').innerHTML='<p style="color:var(--text3)">Error cargando actividad</p>';}
+}
+
+// ── MODAL ────────────────────────────────────────────────────
+function openModal(id) {
+  editId = id||null;
+  const p = id ? products.find(x=>x.id===id) : null;
+  document.getElementById('modal-title').textContent = p?'Editar producto':'Agregar producto';
+  document.getElementById('f-name').value = p?p.name:'';
+  document.getElementById('f-cat').value  = p?p.cat:'Pantallas';
+  document.getElementById('f-model').value= p?p.model:'';
+  document.getElementById('f-qty').value  = p?p.qty:1;
+  document.getElementById('f-serial').value=p?p.serial:'';
+  document.getElementById('f-part').value = p?p.part:'';
+  document.getElementById('f-notes').value= p?p.notes:'';
+  document.getElementById('f-img-url').value = p?p.img_url:'';
+  const prev = document.getElementById('img-prev');
+  if(p&&p.img_url){prev.src=p.img_url;prev.style.display='block';}
+  else{prev.style.display='none';}
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+
+async function previewImg(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const fd = new FormData(); fd.append('image', file);
+  try {
+    const r = await fetch(API+'/api/upload',{method:'POST',body:fd});
+    const data = await r.json();
+    document.getElementById('f-img-url').value = data.url;
+    const prev = document.getElementById('img-prev');
+    prev.src = data.url; prev.style.display='block';
+  } catch(e){ showToast('Error subiendo imagen',true); }
+}
+
+async function saveProduct() {
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){showToast('El nombre es obligatorio',true);return;}
+  const body = {
+    name, cat:document.getElementById('f-cat').value,
+    model:document.getElementById('f-model').value,
+    qty:parseInt(document.getElementById('f-qty').value)||0,
+    serial:document.getElementById('f-serial').value,
+    part:document.getElementById('f-part').value,
+    notes:document.getElementById('f-notes').value,
+    img_url:document.getElementById('f-img-url').value
+  };
+  try {
+    const url  = editId ? `${API}/api/products/${editId}` : `${API}/api/products`;
+    const meth = editId ? 'PUT' : 'POST';
+    await fetch(url,{method:meth,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    await fetchProducts();
+    renderGrid(); renderTable(); updateTopBar();
+    closeModal();
+    showToast(editId?'Producto actualizado':'Producto agregado');
+  } catch(e){ showToast('Error al guardar',true); }
+}
+
+// ── CRUD ─────────────────────────────────────────────────────
+async function deleteProduct(id, name) {
+  if(!confirm(`¿Eliminar "${name}"?`)) return;
+  await fetch(`${API}/api/products/${id}`,{method:'DELETE'});
+  await fetchProducts();
+  renderGrid(); renderTable(); updateTopBar();
+  showToast('Producto eliminado');
+}
+
+async function changeQty(id, delta) {
+  await fetch(`${API}/api/products/${id}/qty`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({delta})});
+  const p = products.find(x=>x.id===id);
+  if(p) p.qty = Math.max(0, p.qty+delta);
+  renderGrid(); renderTable(); updateTopBar();
+}
+
+// ── IMPORT ───────────────────────────────────────────────────
+function handleDrop(e){e.preventDefault();e.currentTarget.classList.remove('drag');handleFile2(e.dataTransfer.files[0]);}
+function handleFile(e){handleFile2(e.target.files[0]);}
+
+function handleFile2(file) {
+  if(!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='csv') { const r=new FileReader();r.onload=ev=>parseRows(csvRows(ev.target.result));r.readAsText(file); }
+  else if(['xlsx','xls'].includes(ext)) {
+    const r=new FileReader();
+    r.onload=ev=>{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      parseRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}));
+    };
+    r.readAsBinaryString(file);
+  } else showToast('Formato no soportado (.csv o .xlsx)',true);
+}
+
+function csvRows(text){ return text.split('\n').map(r=>r.split(',').map(c=>c.trim().replace(/^"|"$/g,''))); }
+
+async function parseRows(rows) {
+  if(rows.length<2){showToast('Archivo vacío',true);return;}
+  const headers = rows[0].map(h=>String(h).toLowerCase());
+  const idx = k => headers.findIndex(h=>h.includes(k));
+  const ni=idx('nombre')>=0?idx('nombre'):0;
+  const ci=idx('categor');const mi=idx('modelo');const qi=idx('cantidad')>=0?idx('cantidad'):idx('qty');
+  const si=idx('serie');const pi=idx('parte');
+  const list = rows.slice(1).map(row=>({
+    name:(row[ni]||'').trim(), cat:(ci>=0?row[ci]:'')||'Otro',
+    model:mi>=0?row[mi]||'':'', qty:parseInt(qi>=0?row[qi]:0)||0,
+    serial:si>=0?row[si]||'':'', part:pi>=0?row[pi]||'':''
+  })).filter(p=>p.name);
+
+  try {
+    const r = await fetch(API+'/api/products/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({products:list})});
+    const res = await r.json();
+    document.getElementById('import-result').innerHTML =
+      `<div class="alert success"><i class="ti ti-check"></i><b>${res.added}</b> productos nuevos agregados, <b>${res.updated}</b> cantidades actualizadas.</div>`;
+    await fetchProducts(); renderGrid(); updateTopBar();
+  } catch(e){ showToast('Error en la importación',true); }
+}
+
+// ── EXPORT ───────────────────────────────────────────────────
+function exportCSV(){ window.open(API+'/api/export/csv','_blank'); }
+
+// ── TOAST ────────────────────────────────────────────────────
+function showToast(msg, err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.borderColor=err?'rgba(239,68,68,.4)':'rgba(16,185,129,.4)';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+init();
+</script>
+</body>
+</html>
